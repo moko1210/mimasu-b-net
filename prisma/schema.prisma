@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 顧客企業情報
+model Customer {
+  id           Int      @id @default(autoincrement())
+  companyName  String   @map("company_name")
+  address      String?
+  phoneNumber  String?  @map("phone_number")
+  contactPerson String? @map("contact_person")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  users        User[]
+  orders       Order[]
+
+  @@map("customers")
+}
+
+// 顧客企業の担当者（ログインユーザー）
+model User {
+  id           Int      @id @default(autoincrement())
+  customerId   Int      @map("customer_id")
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("user") // 'user' or 'manager'
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  customer     Customer @relation(fields: [customerId], references: [id])
+  orders       Order[]
+  favorites    Favorite[]
+
+  @@map("users")
+}
+
+// 三益商会管理者
+model Admin {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+// 商品マスタ
+model Product {
+  id             Int      @id @default(autoincrement())
+  name           String
+  productCode    String   @unique @map("product_code")
+  description    String?
+  category       String?
+  price          Float
+  stockQuantity  Int      @default(0) @map("stock_quantity")
+  minStockLevel  Int      @default(0) @map("min_stock_level") // 在庫アラート用
+  imageUrl       String?  @map("image_url")
+  leadTimeDays   Int      @default(7) @map("lead_time_days") // 納期日数
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  
+  orderItems     OrderItem[]
+  favorites      Favorite[]
+
+  @@map("products")
+}
+
+// 注文ヘッダ
+model Order {
+  id                   Int      @id @default(autoincrement())
+  orderNumber          String   @unique @map("order_number") // 注文番号
+  customerId           Int      @map("customer_id")
+  userId               Int      @map("user_id")
+  totalAmount          Float    @map("total_amount")
+  status               String   @default("pending") // 'pending', 'confirmed', 'shipped', 'delivered'
+  deliveryAddress      String?  @map("delivery_address")
+  desiredDeliveryDate  DateTime? @map("desired_delivery_date")
+  notes                String?
+  orderedAt            DateTime @default(now()) @map("ordered_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  
+  customer             Customer @relation(fields: [customerId], references: [id])
+  user                 User     @relation(fields: [userId], references: [id])
+  orderItems           OrderItem[]
+
+  @@map("orders")
+}
+
+// 注文明細
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @map("order_id")
+  productId   Int      @map("product_id")
+  quantity    Int
+  unitPrice   Float    @map("unit_price")
+  subtotal    Float
+  
+  order       Order    @relation(fields: [orderId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+// お気に入り商品
+model Favorite {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  productId   Int      @map("product_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user        User     @relation(fields: [userId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+  
+  @@unique([userId, productId])
+  @@map("favorites")
+}
