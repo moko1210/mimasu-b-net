@@ -1,0 +1,8 @@
+# まずappフォルダがあるか確認
+if (-not (Test-Path "app")) { mkdir app }
+
+@"
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+"@ | Out-File -FilePath "app/globals.css" -Encoding UTF8
